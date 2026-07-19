@@ -5,23 +5,29 @@ const { default: mongoose } = require("mongoose");
 
 
 async function registerUser(req, res) {
-    const { first, last, email, password } = req.body;
+    const { firstName, lastName, email, password } = req.body;
     const isAlreadyexist = await userModel.findOne({
         email: email,
     })
     if (isAlreadyexist) {
         return res.status(409).json({ message: "user already exist" })
     }
+    if (!firstName || !lastName || !email || !password) {
+        return res.status(400).json({
+            message: "All fields are required"
+        });
+    }
 
     const hash = await bcrypt.hash(req.body.password, 10)
 
     const user = await userModel.create({
-        first_name: first, last_name: last, email, password: hash,
+        firstName, lastName, email, password: hash,
 
     })
     const token = jwt.sign({
-        id: user._id    
+        id: user._id
     }, process.env.JWT_SECRET)
+
 
     res.cookie("signupcookie", token)
     res.status(200).json({
@@ -54,15 +60,19 @@ async function loginUser(req, res) {
         id: isExist._id,
         email: isExist.email,
     }, process.env.JWT_SECRET)
+    res.clearCookie("signupcookie");
 
-    res.cookie("logincookie", token)
+    res.cookie("loginCookie", token, {
+        httpOnly: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
     res.status(200).json({
         message: "success",
-        isExist, 
-        token 
+        isExist,
+        token
     })
 
 
 
 }
-module.exports = { registerUser, loginUser   };
+module.exports = { registerUser, loginUser };
